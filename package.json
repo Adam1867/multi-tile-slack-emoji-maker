@@ -6,6 +6,13 @@
   "dependencies": {
     "image-size": "^0.8.3",
     "jimp": "^0.12.1",
+    "prompts": "^2.3.2",
     "yargs": "^15.3.1"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^26.0.1"
   }
 }

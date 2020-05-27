@@ -7,9 +7,9 @@
  * @param {boolean}  options.rectangular whether to allow portrait and landscape images to remain rectangular
  * @return {object}                      object containing the max emoji height and width
  */
-function getMaxEmojiDimensions(image, options) {
+function getDimensions(image, options) {
   const defaultOptions = {
-    ratioThreshold: 0.1, // todo - prevents rectangular images
+    ratioThreshold: 0.1, // testing - prevent images too cropped
     rectangular: false,
     tileSize: 128
   }
@@ -19,21 +19,27 @@ function getMaxEmojiDimensions(image, options) {
   const w = image.getWidth()
   const height = h - (h % opts.tileSize)
   const width = w - (w % opts.tileSize)
-
-  // console.log(`before ratio: ${h / w}`)
-  // console.log(`after ratio: ${height / width}`)
-  // console.log(
-  //   `within threshold: ${h / w - height / width <= opts.ratioThreshold}`
-  // )
   const withinThreshold = h / w - height / width <= opts.ratioThreshold
 
-  if (opts.rectangular && withinThreshold) return { height, width }
+  if (opts.rectangular && withinThreshold)
+    return {
+      columns: height / opts.tileSize,
+      height,
+      rows: width / opts.tileSize,
+      tile: opts.tileSize,
+      width
+    }
 
   const dimensions = Math.min(height, width)
-
-  return { height: dimensions, width: dimensions }
+  return {
+    columns: dimensions / opts.tileSize,
+    height: dimensions,
+    rows: dimensions / opts.tileSize,
+    tile: opts.tileSize,
+    width: dimensions
+  }
 }
 
 module.exports = {
-  getMaxEmojiDimensions
+  getDimensions
 }

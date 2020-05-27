@@ -1,38 +1,12 @@
 const prompts = require('prompts')
 const Jimp = require('jimp')
 const { argv } = require('yargs')
+const { getDimensions } = require('./src/helpers')
 
 const EMOJI_TILE_SIZE = 128
 
 const filePath = process.argv.slice(2)[0]
 const filename = filePath.replace(/^.*[\\\/]/, '')
-
-// function getMaxDimensions(image, tileSize) {
-//   const h = image.getHeight()
-//   const w = image.getWidth()
-//   const height = h - (h % tileSize)
-//   const width = w - (w % tileSize)
-
-//   return { height, width }
-// }
-
-/**
- * Gets the maximum image dimensions that would work as a slack emoji
- *
- * @param  {Jimp}   image    - a Jimp image file
- * @param  {number} tileSize - size in pixels of a slack emoji tile
- * @return {object}          - object containing the max emoji height and width
- */
-function getMaxEmojiDimensions(image, tileSize) {
-  const h = image.getHeight()
-  const w = image.getWidth()
-  const height = h - (h % tileSize)
-  const width = w - (w % tileSize)
-
-  const dimensions = Math.min(height, width)
-
-  return { height: dimensions, width: dimensions }
-}
 
 /**
  * Returns multidimensional array of Jimp images for a 2x2 emoji
@@ -80,15 +54,16 @@ function createEmoji(image, tileSize, size, name) {
   })
 }
 
-async function main({ name, sizes }) {
+async function main({ name, shape, sizes }) {
   const image = await Jimp.read(filePath)
-  // const { height, width } = getMaxDimensions(image, EMOJI_TILE_SIZE)
-  const { height, width } = getMaxEmojiDimensions(image, EMOJI_TILE_SIZE)
+
+  const { columns, height, rows, tile, width } = getDimensions(image, {
+    rectangular: shape
+  })
 
   const resized = image.clone().cover(width, height)
-  // resized.write(`./output/${name}/original.${resized.getExtension()}`)
 
-  sizes.forEach(size => createEmoji(resized, EMOJI_TILE_SIZE, size, name))
+  sizes.forEach(size => createEmoji(resized, tile, size, name))
 }
 
 // self-invoking async function to run app
@@ -101,13 +76,21 @@ async function main({ name, sizes }) {
       validate: value => (!value ? `You must provide a name` : true)
     },
     {
+      type: 'toggle',
+      name: 'shape',
+      message: 'Square or rectangle emoji?',
+      initial: false,
+      active: 'rectangle',
+      inactive: 'square'
+    },
+    {
       type: 'multiselect',
       name: 'sizes',
       message: 'Pick emoji sizes',
       choices: [
-        { title: 'Small (2x2)', value: 'sm' },
-        { title: 'Medium (3x3)', value: 'md' },
-        { title: 'Large (4x4)', value: 'lg' }
+        { title: 'Small', value: 'sm' },
+        { title: 'Medium', value: 'md' },
+        { title: 'Large', value: 'lg' }
       ],
       min: 1
     }

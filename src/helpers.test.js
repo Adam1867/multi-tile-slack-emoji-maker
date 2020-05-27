@@ -1,18 +1,21 @@
 const path = require('path')
 const Jimp = require('jimp')
-const { getMaxEmojiDimensions } = require('./helpers')
+const { getDimensions } = require('./helpers')
 
 const fixturesPath = path.join(__dirname, '../fixtures')
 
-describe('getMaxEmojiDimensions()', () => {
+describe('getDimensions()', () => {
   describe('square emojis', () => {
     test('should return the correct dimensions for a large image', async () => {
       const image = await Jimp.read(
         path.join(fixturesPath, 'to-sloth-and-beyond.jpg')
       )
 
-      expect(getMaxEmojiDimensions(image)).toEqual({
+      expect(getDimensions(image)).toEqual({
+        columns: 4,
         height: 512,
+        rows: 4,
+        tile: 128,
         width: 512
       })
     })
@@ -20,8 +23,11 @@ describe('getMaxEmojiDimensions()', () => {
     test('should return the correct dimensions for a medium image', async () => {
       const image = await Jimp.read(path.join(fixturesPath, 'kitkat.jpg'))
 
-      expect(getMaxEmojiDimensions(image)).toEqual({
+      expect(getDimensions(image)).toEqual({
+        columns: 2,
         height: 256,
+        rows: 2,
+        tile: 128,
         width: 256
       })
     })
@@ -29,11 +35,16 @@ describe('getMaxEmojiDimensions()', () => {
     test('should return the correct dimensions for a small image', async () => {
       const image = await Jimp.read(path.join(fixturesPath, 'peng.jpeg'))
 
-      expect(getMaxEmojiDimensions(image)).toEqual({
+      expect(getDimensions(image)).toEqual({
+        columns: 1,
         height: 128,
+        rows: 1,
+        tile: 128,
         width: 128
       })
     })
+
+    // TODO: tests for diff tile size
   })
 
   describe('rectangular emojis', () => {
@@ -41,8 +52,11 @@ describe('getMaxEmojiDimensions()', () => {
       const image = await Jimp.read(path.join(fixturesPath, 'stonks.jpeg'))
       const options = { rectangular: true }
 
-      expect(getMaxEmojiDimensions(image, options)).toEqual({
+      expect(getDimensions(image, options)).toEqual({
+        columns: 4,
         height: 512,
+        rows: 7,
+        tile: 128,
         width: 896
       })
     })
@@ -53,8 +67,11 @@ describe('getMaxEmojiDimensions()', () => {
       )
       const options = { rectangular: true }
 
-      expect(getMaxEmojiDimensions(image, options)).toEqual({
+      expect(getDimensions(image, options)).toEqual({
+        columns: 5,
         height: 640,
+        rows: 4,
+        tile: 128,
         width: 512
       })
     })
@@ -63,8 +80,11 @@ describe('getMaxEmojiDimensions()', () => {
       const image = await Jimp.read(path.join(fixturesPath, 'feels_good.png'))
       const options = { rectangular: true }
 
-      expect(getMaxEmojiDimensions(image, options)).toEqual({
+      expect(getDimensions(image, options)).toEqual({
+        columns: 4,
         height: 512,
+        rows: 4,
+        tile: 128,
         width: 512
       })
     })

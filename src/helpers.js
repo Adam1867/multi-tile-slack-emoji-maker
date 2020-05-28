@@ -42,10 +42,10 @@ function getDimensions(image, opts) {
   const maxWidth = width - (width % options.tileSize)
 
   return {
-    columns: maxWidth / options.tileSize,
+    // columns: maxWidth / options.tileSize,
     height: maxHeight,
-    rows: maxHeight / options.tileSize,
-    tile: options.tileSize,
+    // rows: maxHeight / options.tileSize,
+    // tile: options.tileSize,
     width: maxWidth
   }
 }
@@ -80,20 +80,28 @@ function getBaseImage(image, dimensions, opts) {
 }
 
 /**
- *
- * @param {*} image
- */
-function getPossibleSizes(dimensions) {
-  // fimensions
-  console.log('getPossibleSizes from:', dimensions)
-}
-
-/**
- * Returns multidimensional array of Jimp images for a 2x2 emoji
+ * Returns the maxiumum size this emoji could be tiled into
+ * TODO: Accept rectangular images
  *
  * @param  {Jimp}    image       - the image file to tile
  * @param  {number}  tileSize    - the individual tile size
  * @return {void}
+ */
+function getMaxSize(image, tileSize) {
+  const height = image.getHeight()
+  const width = image.getWidth()
+  if (height !== width) throw new Error('This image is not a square.')
+  const maxDimension = width / tileSize
+  if (maxDimension % 1) throw new Error('This image is not tileable')
+  return maxDimension
+}
+
+/**
+ * Returns multidimensional array of Jimp images for the emoji
+ *
+ * @param  {Jimp}    image       - the image file to tile
+ * @param  {number}  tileSize    - the individual tile size
+ * @return {[[Jimp]]}
  */
 function createTiles(image, tileSize) {
   try {
@@ -123,6 +131,6 @@ module.exports = {
   createTiles,
   getBaseImage,
   getDimensions,
-  getPossibleSizes,
+  getMaxSize,
   scaleImage
 }

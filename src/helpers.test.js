@@ -4,6 +4,7 @@ const {
   createTiles,
   getBaseImage,
   getDimensions,
+  getMaxSize,
   scaleImage
 } = require('./helpers')
 
@@ -44,10 +45,10 @@ describe('getDimensions()', () => {
     )
 
     expect(getDimensions(image)).toEqual({
-      columns: 4,
+      // columns: 4,
       height: 640,
-      rows: 5,
-      tile: 128,
+      // rows: 5,
+      // tile: 128,
       width: 512
     })
   })
@@ -56,10 +57,10 @@ describe('getDimensions()', () => {
     const image = await Jimp.read(path.join(fixturesPath, 'peng.jpeg'))
 
     expect(getDimensions(image)).toEqual({
-      columns: 2,
+      // columns: 2,
       height: 128,
-      rows: 1,
-      tile: 128,
+      // rows: 1,
+      // tile: 128,
       width: 256
     })
   })
@@ -68,10 +69,10 @@ describe('getDimensions()', () => {
     const image = await Jimp.read(path.join(fixturesPath, 'kitkat.jpg'))
 
     expect(getDimensions(image)).toEqual({
-      columns: 2,
+      // columns: 2,
       height: 256,
-      rows: 2,
-      tile: 128,
+      // rows: 2,
+      // tile: 128,
       width: 256
     })
   })
@@ -80,10 +81,10 @@ describe('getDimensions()', () => {
     const image = await Jimp.read(path.join(fixturesPath, 'kitkat.jpg'))
 
     expect(getDimensions(image, { tileSize: 64 })).toEqual({
-      columns: 4,
+      // columns: 4,
       height: 256,
-      rows: 4,
-      tile: 64,
+      // rows: 4,
+      // tile: 64,
       width: 256
     })
   })
@@ -130,6 +131,29 @@ describe('getBaseImage()', () => {
     const base = getBaseImage(image, dimensions)
     expect(base.getHeight()).toEqual(512)
     expect(base.getWidth()).toEqual(512)
+  })
+})
+
+describe('getMaxSize()', () => {
+  test('should return the maximum number of vertical and horizontal tiles for a square image', async () => {
+    const image = await Jimp.read(
+      path.join(fixturesPath, 'stonks--base-square.jpeg')
+    )
+    expect(getMaxSize(image, 128)).toEqual(3)
+  })
+
+  test('should throw if image is rectangular', async () => {
+    const image = await Jimp.read(path.join(fixturesPath, 'stonks--base.jpeg'))
+    expect(() => {
+      getMaxSize(image, 64)
+    }).toThrow()
+  })
+
+  test('should throw if image is not a valid size', async () => {
+    const image = await Jimp.read(path.join(fixturesPath, 'kitkat.jpg'))
+    expect(() => {
+      getMaxSize(image, 128)
+    }).toThrow()
   })
 })
 

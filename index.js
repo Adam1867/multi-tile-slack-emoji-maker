@@ -7,7 +7,7 @@ const {
   createTiles,
   getBaseImage,
   getDimensions,
-  getPossibleSizes,
+  getMaxSize,
   scaleImage
 } = require('./src/helpers')
 
@@ -19,69 +19,10 @@ const args = arg({
   '-i': '--image'
 })
 
+/* Constants */
 const EMOJI_TILE_SIZE = 128
 const MAX_DIMENSIONS = 768
 
-/**
- * Returns multidimensional array of Jimp images for a 2x2 emoji
- *
- * @param  {Jimp}   image    - a Jimp image file (resized)
- * @param  {number} tileSize - size in pixels of a slack emoji tile
- * @param  {string} size     - the desired emoji size (sm/md/lg)
- * @return {array}           - array containing the images needed for the emoji
- */
-// function createEmoji(image, tileSize, size, name) {
-//   const sizeMap = {
-//     sm: 2,
-//     md: 3,
-//     lg: 4
-//   }
-//   const multiplier = sizeMap[size]
-
-//   if (image.getWidth() < tileSize * multiplier) {
-//     throw new Error(
-//       `Image too small to be turned into a ${multiplier}x${multiplier} emoji`
-//     )
-//   }
-
-//   const resized = image
-//     .clone()
-//     .cover(tileSize * multiplier, tileSize * multiplier)
-
-//   const tiles = []
-//   for (let i = 0; i < multiplier; i++) {
-//     const row = []
-//     for (let j = 0; j < multiplier; j++) {
-//       row.push(
-//         resized.clone().crop(j * tileSize, i * tileSize, tileSize, tileSize)
-//       )
-//     }
-//     tiles.push(row)
-//   }
-
-//   tiles.forEach((row, rowIdx) => {
-//     row.forEach((tile, tileIdx) =>
-//       tile.write(
-//         `./output/${name}/${size}/${rowIdx}-${tileIdx}.${tile.getExtension()}`
-//       )
-//     )
-//   })
-// }
-
-/**
- * The main function of the app
- */
-// async function main({ name, shape, sizes }) {
-// const image = await Jimp.read(filePath)
-// const { columns, height, rows, tile, width } = getDimensions(image, {
-//   rectangular: shape
-// })
-// const resized = image.clone().cover(width, height)
-// sizes.forEach(size => createEmoji(resized, tile, size, name))
-// }
-
-//   main(response)
-// })()
 async function main() {
   // grab supplied image path
   const filePath = args['--image']
@@ -90,10 +31,16 @@ async function main() {
   const image = await Jimp.read(filePath)
 
   // scale image
-  const scaledImaged = scaleImage(image, MAX_DIMENSIONS)
+  const scaledImage = scaleImage(image, MAX_DIMENSIONS)
+  console.log(
+    '🎨 ->',
+    colors.cyan(
+      `Scaled original image (${image.getWidth()}x${image.getHeight()}px) to max dimensions of ${scaledImage.getWidth()}x${scaledImage.getHeight()}px`
+    )
+  )
 
   // get valid emoji dimensions of the scaled image
-  const dimensions = getDimensions(scaledImaged, { tileSize: EMOJI_TILE_SIZE })
+  const dimensions = getDimensions(scaledImage, { tileSize: EMOJI_TILE_SIZE })
 
   // throw error if image is too small
   if (!dimensions) throw new Error('Sorry, the image provided is too small.')
@@ -106,38 +53,52 @@ async function main() {
     message: `What do you want the emoji to be called?`,
     validate: value => (!value ? `You must provide a name` : true)
   })
-  if (dimensions.height !== dimensions.width) {
-    questions.push({
-      type: 'toggle',
-      name: 'square',
-      message: 'Do you want emoji to be square?',
-      initial: true,
-      active: 'Yes',
-      inactive: 'No'
-    })
-  }
-  // need to calculate what sm/md/lg are, and which options should show.
-  // {
-  //   type: 'multiselect',
-  //   name: 'sizes',
-  //   message: 'Pick emoji sizes',
-  //   choices: [
-  //     { title: 'Small', value: 'sm' },
-  //     { title: 'Medium', value: 'md' },
-  //     { title: 'Large', value: 'lg' }
-  //   ],
-  //   min: 1
+  /* for now always make square */
+  // if (dimensions.height !== dimensions.width) {
+  //   questions.push({
+  //     type: 'toggle',
+  //     name: 'square',
+  //     message: 'Do you want emoji to be square?',
+  //     initial: true,
+  //     active: 'Yes',
+  //     inactive: 'No'
+  //   })
   // }
 
   const choices = await prompts(questions)
 
   // get base image for dividing into tiles
-  const baseImage = getBaseImage(scaledImaged, dimensions, {
-    square: choices.square
+  const baseImage = getBaseImage(scaledImage, dimensions, {
+    /* for now force to be square */
+    // square: choices.square
   })
+  console.log(
+    '🎨 ->',
+    colors.cyan(
+      `Cropped image to ${baseImage.getWidth()}x${baseImage.getHeight()}px so it can be correctly tiled`
+    )
+  )
 
-  // const sizes = getPossibleSizes(baseImage, EMOJI_TILE_SIZE)
+  // get valid emoji sizes (square only) and prompt user which they want
+  const maxSize = getMaxSize(baseImage, EMOJI_TILE_SIZE)
+  if (maxSize < 2)
+    throw new Error("What's the point in making a multitile 1x1 emoji?!")
+  const sizeQuestion = {
+    type: 'multiselect',
+    name: 'sizes',
+    message: 'Which emoji sizes would you like?',
+    choices: [],
+    min: 1
+  }
+  for (let d = 2; d <= maxSize; d++) {
+    sizeQuestion.choices.push({
+      title: `${d * EMOJI_TILE_SIZE}px (${d}x${d} tiles)`,
+      value: d
+    })
+  }
+  const sizeChoice = await prompts(sizeQuestion)
 
+  /* for now don't save base resized image */
   // save base image
   // baseImage.write(
   //   `./output/${choices.name}/original.${baseImage.getExtension()}`
@@ -156,18 +117,27 @@ async function main() {
 
   // write tiles to output directory
   rimraf.sync(`./output/${choices.name}`)
-  tiles.forEach((row, rowIdx) => {
-    row.forEach((tile, tileIdx) =>
-      tile.write(
-        `./output/${choices.name}/${
-          choices.name
-        }-${rowIdx}-${tileIdx}.${tile.getExtension()}`
+  sizeChoice.sizes.forEach(size => {
+    const resizedImage = baseImage
+      .clone()
+      .cover(size * EMOJI_TILE_SIZE, size * EMOJI_TILE_SIZE)
+    const tiles = createTiles(resizedImage, EMOJI_TILE_SIZE)
+    tiles.forEach((row, rowIdx) => {
+      row.forEach((tile, tileIdx) =>
+        tile.write(
+          `./output/${choices.name}/${size}x${size}/${
+            choices.name
+          }-${rowIdx}-${tileIdx}.${tile.getExtension()}`
+        )
+      )
+    })
+    console.log(
+      '🎨 ->',
+      colors.cyan(
+        `Wrote ${size}x${size} emoji tiles to ./output/${choices.name} directory`
       )
     )
   })
-
-  // foreach sizes as size
-  // createTiledEmoji(baseImage, size, EMOJI_TILE_SIZE)
 }
 
 main().catch(err => console.error(err))

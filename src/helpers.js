@@ -1,45 +1,128 @@
 /**
- * Gets the maximum image dimensions that would work as a slack emoji
+ * Get a scaled down clone of an image.
  *
- * @param  {Jimp}    image               a Jimp image file
- * @param {object}   options
- * @param {number}   options.tileSize    size in pixels of a slack emoji tile
- * @param {boolean}  options.rectangular whether to allow portrait and landscape images to remain rectangular
- * @return {object}                      object containing the max emoji height and width
+ * @param  {Jimp}    image  the image file
+ * @param  {number}  max    max height/width of the image
+ * @return {Jimp}           scaled image
  */
-function getDimensions(image, options) {
-  const defaultOptions = {
-    ratioThreshold: 0.1, // testing - prevent images too cropped
-    rectangular: false,
+function scaleImage(image, max) {
+  const height = image.getHeight()
+  const width = image.getWidth()
+  const biggestDimension = Math.max(height, width)
+
+  if (max && biggestDimension > max) {
+    return image.clone().scaleToFit(max, max)
+  }
+  return image.clone()
+}
+
+/**
+ * Get the maximum dimensions of an image that would be compatible as a slack
+ * emoji.
+ *
+ * @param  {Jimp}     image              the image file
+ * @param  {object}   opts               object of options
+ * @param  {number}   opts.tileSize      size in pixels of a slack emoji tile
+ * @return {object}                      object containing the dimensions
+ */
+function getDimensions(image, opts) {
+  const defaults = {
     tileSize: 128
   }
-  const opts = { ...defaultOptions, ...options }
+  const options = { ...defaults, ...opts }
 
-  const h = image.getHeight()
-  const w = image.getWidth()
-  const height = h - (h % opts.tileSize)
-  const width = w - (w % opts.tileSize)
-  const withinThreshold = h / w - height / width <= opts.ratioThreshold
+  const height = image.getHeight()
+  const width = image.getWidth()
 
-  if (opts.rectangular && withinThreshold)
-    return {
-      columns: height / opts.tileSize,
-      height,
-      rows: width / opts.tileSize,
-      tile: opts.tileSize,
-      width
+  if (height < options.tileSize || width < options.tileSize) {
+    return null
+  }
+
+  const maxHeight = height - (height % options.tileSize)
+  const maxWidth = width - (width % options.tileSize)
+
+  return {
+    columns: maxWidth / options.tileSize,
+    height: maxHeight,
+    rows: maxHeight / options.tileSize,
+    tile: options.tileSize,
+    width: maxWidth
+  }
+}
+
+/**
+ * Get the base image that will be divided into emoji image tiles.
+ *
+ * @param  {Jimp}     image              the image file
+ * @param  {object}   dimensions         object of dimensions
+ * @param  {object}   opts               object of options
+ * @param  {boolean}  opts.square        should emoji be square
+ * @return {Jimp}                        base image for tiling
+ */
+function getBaseImage(image, dimensions, opts) {
+  const defaults = {
+    square: true
+  }
+  const options = { ...defaults, ...opts }
+
+  const { height, width } = dimensions
+
+  // get base image
+  let baseImage
+  if (options.square) {
+    const smallestDimension = Math.min(height, width)
+    baseImage = image.clone().cover(smallestDimension, smallestDimension)
+  } else {
+    baseImage = image.clone().cover(width, height)
+  }
+
+  return baseImage
+}
+
+/**
+ *
+ * @param {*} image
+ */
+function getPossibleSizes(dimensions) {
+  // fimensions
+  console.log('getPossibleSizes from:', dimensions)
+}
+
+/**
+ * Returns multidimensional array of Jimp images for a 2x2 emoji
+ *
+ * @param  {Jimp}    image       - the image file to tile
+ * @param  {number}  tileSize    - the individual tile size
+ * @return {void}
+ */
+function createTiles(image, tileSize) {
+  try {
+    const tiles = []
+    const columnCount = image.getWidth() / tileSize
+    const rowCount = image.getHeight() / tileSize
+
+    for (let i = 0; i < rowCount; i++) {
+      const row = []
+      for (let j = 0; j < columnCount; j++) {
+        row.push(
+          image.clone().crop(j * tileSize, i * tileSize, tileSize, tileSize)
+        )
+      }
+      tiles.push(row)
     }
 
-  const dimensions = Math.min(height, width)
-  return {
-    columns: dimensions / opts.tileSize,
-    height: dimensions,
-    rows: dimensions / opts.tileSize,
-    tile: opts.tileSize,
-    width: dimensions
+    return tiles
+  } catch (error) {
+    throw new Error(
+      'Something went wrong. Perhaps an invalid image provided to createTiles()?'
+    )
   }
 }
 
 module.exports = {
-  getDimensions
+  createTiles,
+  getBaseImage,
+  getDimensions,
+  getPossibleSizes,
+  scaleImage
 }

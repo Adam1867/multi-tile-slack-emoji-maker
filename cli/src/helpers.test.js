@@ -8,7 +8,7 @@ const {
   scaleImage
 } = require('./helpers')
 
-const fixturesPath = path.join(__dirname, '../fixtures')
+const fixturesPath = path.join(__dirname, '../../fixtures')
 
 describe('scaleImage()', () => {
   test('should scale down large images', async () => {

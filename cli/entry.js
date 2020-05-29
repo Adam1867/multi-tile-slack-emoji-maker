@@ -116,7 +116,7 @@ async function main() {
   const tiles = createTiles(baseImage, EMOJI_TILE_SIZE)
 
   // write tiles to output directory
-  rimraf.sync(`./output/${choices.name}`)
+  rimraf.sync(`../output/${choices.name}`)
   sizeChoice.sizes.forEach(size => {
     const resizedImage = baseImage
       .clone()
@@ -125,7 +125,7 @@ async function main() {
     tiles.forEach((row, rowIdx) => {
       row.forEach((tile, tileIdx) =>
         tile.write(
-          `./output/${choices.name}/${size}x${size}/${
+          `../output/${choices.name}/${size}x${size}/${
             choices.name
           }-${rowIdx}-${tileIdx}.${tile.getExtension()}`
         )
